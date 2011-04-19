@@ -17,22 +17,20 @@
 
 package org.openengsb.connector.git.internal;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import org.openengsb.core.api.ServiceInstanceFactory;
-import org.openengsb.core.api.descriptor.ServiceDescriptor;
-import org.openengsb.core.api.validation.MultipleAttributeValidationResult;
-import org.openengsb.core.api.validation.MultipleAttributeValidationResultImpl;
-import org.openengsb.domain.scm.ScmDomain;
+import org.openengsb.core.api.Domain;
+import org.openengsb.core.common.AbstractConnectorInstanceFactory;
 
-public class GitServiceInstanceFactory implements ServiceInstanceFactory<ScmDomain, GitServiceImpl> {
+public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<GitServiceImpl> {
 
-    public GitServiceInstanceFactory() {
+    @Override
+    public Domain createNewInstance(String id) {
+        return new GitServiceImpl(id);
     }
 
     @Override
-    public void updateServiceInstance(GitServiceImpl instance, Map<String, String> attributes) {
+    public void doApplyAttributes(GitServiceImpl instance, Map<String, String> attributes) {
         if (attributes.containsKey("repository")) {
             instance.setRemoteLocation(attributes.get("repository"));
         }
@@ -44,35 +42,4 @@ public class GitServiceInstanceFactory implements ServiceInstanceFactory<ScmDoma
         }
     }
 
-    @Override
-    public GitServiceImpl createServiceInstance(String id, Map<String, String> attributes) {
-        GitServiceImpl service = new GitServiceImpl(id);
-        updateServiceInstance(service, attributes);
-        return service;
-    }
-
-    @Override
-    public ServiceDescriptor getDescriptor(ServiceDescriptor.Builder builder) {
-        builder.name("service.name").description("service.description");
-        builder.attribute(builder.newAttribute().id("repository").name("service.repository.name")
-            .description("service.repository.description").build());
-        builder.attribute(builder.newAttribute().id("workspace").name("service.workspace.name")
-            .description("service.workspace.description").build());
-        builder.attribute(builder.newAttribute().id("branch").name("service.branch.name")
-            .description("service.branch.description").build());
-        return builder.build();
-    }
-
-    @Override
-    public MultipleAttributeValidationResult updateValidation(
-            GitServiceImpl instance, Map<String, String> attributes) {
-        updateServiceInstance(instance, attributes);
-        return new MultipleAttributeValidationResultImpl(true, new HashMap<String, String>());
-    }
-
-    @Override
-    public MultipleAttributeValidationResult createValidation(String id,
-            Map<String, String> attributes) {
-        return new MultipleAttributeValidationResultImpl(true, new HashMap<String, String>());
-    }
 }
