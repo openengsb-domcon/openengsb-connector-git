@@ -373,4 +373,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         CommitRef commitRef = service.getCommitRefForTag(tag);
         assertThat(head.name(), is(commitRef.getStringRepresentation()));
     }
+    
+    @Test
+    public void changeRemoteLocation_ShouldChangeRemoteLocation() {
+        service.setRemoteLocation("testLoc");
+        assertThat(service.getRepository().getConfig().getString("remote", "origin", "url"), is("testLoc"));
+    }
 }
