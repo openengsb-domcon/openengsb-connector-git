@@ -339,6 +339,14 @@ public class GitServiceImpl extends AbstractOpenEngSBService implements ScmDomai
             remoteLocation = remoteLocation.replace("file:/", "file:///");
         }
         this.remoteLocation = remoteLocation;
+        if (repository != null) {
+            try {
+                repository.getConfig().setString("remote", "origin", "url", remoteLocation);
+                repository.getConfig().save();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public void setLocalWorkspace(String localWorkspace) {
