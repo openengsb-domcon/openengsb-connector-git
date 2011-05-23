@@ -1,3 +1,16 @@
+openengsb-connector-git-1.2.2 2011-05-23
+---------------------------------------------------------------------
+
+Seond release of the OpenEngSB Git Connector upgrading to the latest OpenEngSB Framework and SCM Domain version.
+
+** Library Upgrade
+    * [OPENENGSB-1498] - Upgrade openengsb-domain-scm to 1.2.1
+    * [OPENENGSB-1609] - Upgrade openengsb-framework to 1.3.0.M2
+
+** Task
+    * [OPENENGSB-1580] - Release openengsb-connector-git-1.2.2
+
+
 openengsb-connector-git-1.2.1 2011-05-16
 ---------------------------------------------------------------------
 
