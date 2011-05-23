@@ -33,8 +33,8 @@
     <bundle.namespace>org.openengsb.connector.git</bundle.namespace>
     <jgit.version>0.10.1</jgit.version>
     <commons.compress.version>1.1</commons.compress.version>
-    <openengsb.domain.scm.version>1.2.0</openengsb.domain.scm.version>
-    <openengsb.domain.scm.range>[1.2,1.3)</openengsb.domain.scm.range>
+    <openengsb.domain.version>1.2.1</openengsb.domain.version>
+    <openengsb.domain.range>[1.2,1.3)</openengsb.domain.range>
   </properties>
 
   <groupId>org.openengsb.connector</groupId>
@@ -94,6 +94,20 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              ${openengsb.imports},
+              org.openengsb.domain.scm.*;version="${openengsb.domain.range}",
+              *
+            </Import-Package>
+          </instructions>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -119,7 +133,7 @@
     <dependency>
       <groupId>org.openengsb.domain</groupId>
       <artifactId>openengsb-domain-scm</artifactId>
-      <version>${openengsb.domain.scm.version}</version>
+      <version>${openengsb.domain.version}</version>
       <scope>provided</scope>
     </dependency>
 
