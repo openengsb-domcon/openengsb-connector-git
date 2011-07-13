@@ -40,6 +40,9 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         if (attributes.containsKey("branch")) {
             instance.setWatchBranch(attributes.get("branch"));
         }
+        if (attributes.containsKey("submodulesHack")) {
+            instance.setSubmodulesHack(attributes.get("submodulesHack"));
+        }
     }
 
 }
