@@ -55,7 +55,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.openengsb.connector.git.domain.GitCommitRef;
 import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.core.api.AliveState;
-import org.openengsb.core.common.AbstractOpenEngSBService;
+import org.openengsb.core.common.AbstractOpenEngSBConnectorService;
 import org.openengsb.domain.scm.CommitRef;
 import org.openengsb.domain.scm.ScmDomain;
 import org.openengsb.domain.scm.ScmException;
@@ -63,7 +63,7 @@ import org.openengsb.domain.scm.TagRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GitServiceImpl extends AbstractOpenEngSBService implements ScmDomain {
+public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements ScmDomain {
     private static final Logger LOGGER = LoggerFactory.getLogger(GitServiceImpl.class);
 
     private String remoteLocation;
