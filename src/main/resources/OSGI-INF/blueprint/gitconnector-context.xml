@@ -29,7 +29,10 @@
       <entry key="domain" value="scm" />
       <entry key="connector" value="git" />
     </service-properties>
-    <bean class="org.openengsb.connector.git.internal.GitServiceInstanceFactory" />
+    <bean class="org.openengsb.connector.git.internal.GitServiceInstanceFactory">
+      <property name="scmEvents" ref="scmEvents" />
+      <property name="ekbService" ref="ekbService" />  
+    </bean>
   </service>
 
   <service>
@@ -45,4 +48,8 @@
       <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
   </service>
+  
+  <reference id="scmEvents" interface="org.openengsb.domain.scm.ScmDomainEvents" />
+  <reference id="ekbService" interface="org.openengsb.core.api.ekb.EngineeringKnowledgeBaseService" />
+  
 </blueprint>
