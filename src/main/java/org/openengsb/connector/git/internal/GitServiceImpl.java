@@ -391,8 +391,8 @@ public class GitServiceImpl extends AbstractOpenEngSBService implements ScmDomai
     }
 
     public void setLocalWorkspace(String localWorkspace) {
-        String realWorkspace= localWorkspace;
-        if(!new File(realWorkspace).isAbsolute()){
+        String realWorkspace = localWorkspace;
+        if (!new File(realWorkspace).isAbsolute()) {
             realWorkspace = System.getProperty("karaf.data") + realWorkspace;
         }
         this.localWorkspace = new File(realWorkspace);
