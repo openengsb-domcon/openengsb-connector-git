@@ -1,3 +1,19 @@
+openengsb-connector-git-1.2.4 2011-08-17
+---------------------------------------------------------------------
+
+Added an additional log to identify problem in the submodule-hack. In addition base paths are now interpreted as
+children of karaf.data.
+
+** Bug
+    * [OPENENGSB-1895] - Submodule-hack in git-connector swallows exception completely
+
+** Improvement
+    * [OPENENGSB-1886] - git-connector should interpret non-absolute paths as children of $karaf.data{}
+
+** Task
+    * [OPENENGSB-1869] - Release openengsb-connector-git-1.2.4
+
+
 openengsb-connector-git-1.2.3 2011-08-04
 ---------------------------------------------------------------------
 
