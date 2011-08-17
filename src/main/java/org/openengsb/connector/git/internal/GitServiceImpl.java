@@ -127,6 +127,7 @@ public class GitServiceImpl extends AbstractOpenEngSBService implements ScmDomai
                     if (!submodulesHack) {
                         throw e2;
                     }
+                    LOGGER.error("submodule hack caught exception", e2);
                     submoduleHack(true);
                 }
             } else {
@@ -138,6 +139,7 @@ public class GitServiceImpl extends AbstractOpenEngSBService implements ScmDomai
                         throw e2;
                     }
                     submoduleHack(false);
+                    LOGGER.error("submodule hack caught exception", e2);
                     repository.scanForRepoChanges();
                 }
             }
