@@ -19,13 +19,20 @@ package org.openengsb.connector.git.internal;
 
 import java.util.Map;
 
-import org.openengsb.core.api.Domain;
+import org.openengsb.core.api.Connector;
+import org.openengsb.core.api.ekb.EngineeringKnowledgeBaseService;
 import org.openengsb.core.common.AbstractConnectorInstanceFactory;
+import org.openengsb.domain.scm.ScmDomainEvents;
 
 public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<GitServiceImpl> {
 
+    @SuppressWarnings("unused")
+    private ScmDomainEvents scmEvents;
+    @SuppressWarnings("unused")
+    private EngineeringKnowledgeBaseService ekbService;
+
     @Override
-    public Domain createNewInstance(String id) {
+    public Connector createNewInstance(String id) {
         return new GitServiceImpl(id);
     }
 
@@ -43,6 +50,14 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         if (attributes.containsKey("submodulesHack")) {
             instance.setSubmodulesHack(attributes.get("submodulesHack"));
         }
+    }
+
+    public void setEkbService(EngineeringKnowledgeBaseService ekbService) {
+        this.ekbService = ekbService;
+    }
+
+    public void setScmEvents(ScmDomainEvents scmEvents) {
+        this.scmEvents = scmEvents;
     }
 
 }
