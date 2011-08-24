@@ -1,3 +1,35 @@
+openengsb-connector-git-1.2.4 2011-08-17
+---------------------------------------------------------------------
+
+Added an additional log to identify problem in the submodule-hack. In addition base paths are now interpreted as
+children of karaf.data.
+
+** Bug
+    * [OPENENGSB-1895] - Submodule-hack in git-connector swallows exception completely
+
+** Improvement
+    * [OPENENGSB-1886] - git-connector should interpret non-absolute paths as children of $karaf.data{}
+
+** Task
+    * [OPENENGSB-1869] - Release openengsb-connector-git-1.2.4
+
+
+openengsb-connector-git-1.2.3 2011-08-04
+---------------------------------------------------------------------
+
+Third release of the OpenEngSB Git Connector upgrading to the latest OpenEngSB Framework and adding a
+workaround for the git submodule problem.
+
+** Bug
+    * [OPENENGSB-833] - jgit does not support submodules
+
+** Library Upgrade
+    * [OPENENGSB-1870] - Upgrade openengsb-connector-parent to 1.3.0.M3
+
+** Task
+    * [OPENENGSB-1640] - Release openengsb-connector-git-1.2.3
+
+
 openengsb-connector-git-1.2.2 2011-05-23
 ---------------------------------------------------------------------
 

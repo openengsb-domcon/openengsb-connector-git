@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -70,6 +71,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     private File localWorkspace;
     private String watchBranch;
     private FileRepository repository;
+    private boolean submodulesHack;
 
     public GitServiceImpl(String instanceId) {
         super(instanceId);
@@ -78,6 +80,28 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     @Override
     public AliveState getAliveState() {
         return AliveState.OFFLINE;
+    }
+
+    private void submoduleHack(boolean initial) throws Exception {
+        LinkedList<String> commands = new LinkedList<String>();
+
+        LOGGER.error("JGit exception caught, activating the submodule hack");
+
+        String s = File.separator;
+        File lock = new File(localWorkspace + s + ".git" + s + "index.lock");
+        lock.delete();
+
+        commands.add("git");
+        commands.add("reset");
+        commands.add("--hard");
+        if (!initial) {
+            commands.add("origin/" + watchBranch);
+        }
+
+        ProcessBuilder builder = new ProcessBuilder(commands);
+        builder.directory(localWorkspace);
+        int exit = builder.start().waitFor();
+        LOGGER.debug("Git command exited with status " + exit);
     }
 
     @Override
@@ -97,10 +121,27 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
                     LOGGER.debug("Nothing to fetch from remote repository.");
                     return null;
                 }
-                doCheckout(fetchResult);
+                try {
+                    doCheckout(fetchResult);
+                } catch (Exception e2) {
+                    if (!submodulesHack) {
+                        throw e2;
+                    }
+                    LOGGER.error("submodule hack caught exception", e2);
+                    submoduleHack(true);
+                }
             } else {
                 LOGGER.debug("Local repository exists. Pulling remote repository.");
-                git.pull().call();
+                try {
+                    git.pull().call();
+                } catch (Exception e2) {
+                    if (!submodulesHack) {
+                        throw e2;
+                    }
+                    submoduleHack(false);
+                    LOGGER.error("submodule hack caught exception", e2);
+                    repository.scanForRepoChanges();
+                }
             }
             AnyObjectId newHead = repository.resolve(Constants.HEAD);
             if (newHead == null) {
@@ -350,7 +391,11 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     public void setLocalWorkspace(String localWorkspace) {
-        this.localWorkspace = new File(localWorkspace);
+        String realWorkspace = localWorkspace;
+        if (!new File(realWorkspace).isAbsolute()) {
+            realWorkspace = System.getProperty("karaf.data") + realWorkspace;
+        }
+        this.localWorkspace = new File(realWorkspace);
     }
 
     public void setWatchBranch(String watchBranch) {
@@ -647,5 +692,9 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         } catch (IOException e) {
             throw new ScmException(e);
         }
+    }
+
+    public void setSubmodulesHack(String string) {
+        submodulesHack = new Boolean(string).booleanValue();
     }
 }
