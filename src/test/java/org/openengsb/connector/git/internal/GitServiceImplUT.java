@@ -42,8 +42,8 @@ import org.openengsb.domain.scm.CommitRef;
 public class GitServiceImplUT extends AbstractGitServiceImpl {
 
     @Test
-    public void pollWithEmptyWorkspace_shouldCloneSSHRemoteRepository() throws IOException {
-        service.setRemoteLocation("git@github.com:Mercynary/myTestRepo.git");
+    public void pollWithEmptyWorkspace_shouldCloneRemoteRepository() throws IOException {
+        service.setRemoteLocation("git://github.com/Mercynary/myTestRepo.git");
         service.update();
         localRepository = service.getRepository();
         AnyObjectId id = localRepository.resolve(Constants.HEAD);
