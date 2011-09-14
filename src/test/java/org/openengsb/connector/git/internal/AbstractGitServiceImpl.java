@@ -23,6 +23,8 @@ import org.eclipse.jgit.storage.file.FileRepository;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
+import org.openengsb.domain.scm.ScmDomainEvents;
 
 public abstract class AbstractGitServiceImpl {
 
@@ -33,6 +35,7 @@ public abstract class AbstractGitServiceImpl {
     protected File localDirectory;
     protected FileRepository remoteRepository;
     protected FileRepository localRepository;
+    protected ScmDomainEvents eventMock;
 
     protected GitServiceImpl service;
 
@@ -41,7 +44,9 @@ public abstract class AbstractGitServiceImpl {
         remoteDirectory = tempFolder.newFolder("remote");
         localDirectory = tempFolder.newFolder("local");
         remoteRepository = RepositoryFixture.createRepository(remoteDirectory);
-        service = new GitServiceImpl("42");
+
+        eventMock = Mockito.mock(ScmDomainEvents.class);
+        service = new GitServiceImpl("42", eventMock);
         service.setLocalWorkspace(localDirectory.getAbsolutePath());
         service.setRemoteLocation(remoteDirectory.toURI().toURL().toExternalForm().replace("%20", " "));
         service.setWatchBranch("master");

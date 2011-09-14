@@ -26,14 +26,13 @@ import org.openengsb.domain.scm.ScmDomainEvents;
 
 public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<GitServiceImpl> {
 
-    @SuppressWarnings("unused")
     private ScmDomainEvents scmEvents;
     @SuppressWarnings("unused")
     private EngineeringKnowledgeBaseService ekbService;
 
     @Override
     public Connector createNewInstance(String id) {
-        return new GitServiceImpl(id);
+        return new GitServiceImpl(id, scmEvents);
     }
 
     @Override
@@ -50,6 +49,10 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         if (attributes.containsKey("submodulesHack")) {
             instance.setSubmodulesHack(attributes.get("submodulesHack"));
         }
+        if (attributes.containsKey("pollInterval")) {
+            instance.setPollInterval(attributes.get("pollInterval"));
+        }
+        instance.startPoller();
     }
 
     public void setEkbService(EngineeringKnowledgeBaseService ekbService) {
