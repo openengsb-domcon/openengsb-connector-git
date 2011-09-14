@@ -54,6 +54,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void updateWithEmptyWorkspace_shouldCloneRemoteRepository() throws Exception {
+        service.startPoller();
         List<CommitRef> commits = service.update();
         assertThat(commits.size(), is(1));
         ObjectId remote = service.getRepository().resolve("refs/remotes/origin/master");
@@ -64,6 +65,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void updateAgainFromSameRepoState_shouldReturnFalseFromPoll() {
+        service.startPoller();
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
         List<CommitRef> updateTwo = service.update();
@@ -72,6 +74,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void update_shouldPullChangesIntoLocalBranch() throws Exception {
+        service.startPoller();
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
         File f = service.export().getFile();
@@ -81,6 +84,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void updateFromUpdatedRemote_shouldUpdateLocal() throws Exception {
+        service.startPoller();
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
         Git git = new Git(remoteRepository);
@@ -100,6 +104,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     @Test
     public void updateWithNoExistingWatchBranch_shouldReturnFalse() {
         service.setWatchBranch("unknown");
+        service.startPoller();
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne, nullValue());
     }
@@ -172,6 +177,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void getFileFromCommitByRef_shouldReturnFileWithCorrectContent() throws Exception {
+        service.startPoller();
         String fileName = "myFile";
 
         AnyObjectId head = remoteRepository.resolve(Constants.HEAD);
@@ -229,6 +235,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void removeFileFromRepository_shouldReturnNewCommitRefAndDeleteFile() throws Exception {
+        /* Don't start the poller in this test, it doesn't configure a proper remote */
         localRepository = RepositoryFixture.createRepository(localDirectory);
         AnyObjectId headId = localRepository.resolve(Constants.HEAD);
         RevWalk rw = new RevWalk(localRepository);
@@ -244,6 +251,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void removeDirectoryFromRepository_shouldReturnNewCommitRefAndDeleteFiles() throws Exception {
+        /* Don't start the poller in this test, it doesn't configure a proper remote */
         localRepository = RepositoryFixture.createRepository(localDirectory);
 
         String dir = "testDirectory";
@@ -342,6 +350,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void tagEmptyRepoWithName_shouldThrowSCMException() throws Exception {
+        /* Don't start the poller in this test, it doesn't configure a proper remote */
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         localRepository = builder.setWorkTree(localDirectory).build();
         localRepository.create();

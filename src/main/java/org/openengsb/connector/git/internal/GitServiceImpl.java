@@ -25,6 +25,9 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.AddCommand;
@@ -57,8 +60,10 @@ import org.openengsb.core.common.AbstractOpenEngSBConnectorService;
 import org.openengsb.core.common.util.ModelUtils;
 import org.openengsb.domain.scm.CommitRef;
 import org.openengsb.domain.scm.ScmDomain;
+import org.openengsb.domain.scm.ScmDomainEvents;
 import org.openengsb.domain.scm.ScmException;
 import org.openengsb.domain.scm.TagRef;
+import org.openengsb.domain.scm.ScmUpdateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,9 +75,25 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     private String watchBranch;
     private FileRepository repository;
     private boolean submodulesHack;
+    private int pollInterval = 60;
+    private PollTask poller;
+    private ScheduledExecutorService scmScheduler = Executors.newScheduledThreadPool(1);
+    private ScmDomainEvents domainEventInterface;
+    private List<CommitRef> unreportedUpdates = null;
 
-    public GitServiceImpl(String instanceId) {
+    public GitServiceImpl(String instanceId, ScmDomainEvents events) {
         super(instanceId);
+        domainEventInterface = events;
+    }
+
+    /**
+     * Starts the poller scheduler. Call this method once all parameters are configured.
+     */
+    public void startPoller() {
+        /* Poll once to avoid race conditions between legacy update() calls and the poller */
+        poll();
+        poller = new PollTask(this);
+        scmScheduler.scheduleWithFixedDelay(poller, pollInterval, pollInterval, TimeUnit.SECONDS);
     }
 
     @Override
@@ -102,8 +123,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         LOGGER.debug("Git command exited with status " + exit);
     }
 
-    @Override
-    public List<CommitRef> update() {
+    private synchronized List<CommitRef> do_update() {
         List<CommitRef> commits = new ArrayList<CommitRef>();
         try {
             if (repository == null) {
@@ -163,7 +183,35 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         } catch (Exception e) {
             throw new ScmException(e);
         }
+
+        /* This is to make sure the poller doesn't hide commits from the depreciated update() method. Store
+         * the new commits in a list until update() retrieves them
+         */
+        if (unreportedUpdates == null) {
+            unreportedUpdates = commits;
+        } else {
+            unreportedUpdates.addAll(commits);
+        }
+
         return commits;
+    }
+
+    @Override
+    public synchronized List<CommitRef> update() {
+        do_update();
+        List<CommitRef> ret = unreportedUpdates;
+        unreportedUpdates = null;
+        return ret;
+    }
+
+    public void poll() {
+        List<CommitRef> refs = do_update();
+        if (refs == null) {
+            return;
+        }
+
+        ScmUpdateEvent event = new ScmUpdateEvent(refs);
+        domainEventInterface.raiseEvent(event);
     }
 
     /**
@@ -665,5 +713,9 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
 
     public void setSubmodulesHack(String string) {
         submodulesHack = new Boolean(string).booleanValue();
+    }
+
+    public void setPollInterval(String pollInterval) {
+        this.pollInterval = new Integer(pollInterval).intValue();
     }
 }
