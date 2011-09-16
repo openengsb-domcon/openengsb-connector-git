@@ -300,12 +300,14 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void tagHeadWithName_shouldReturnTagRefWithName() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.startPoller();
+
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
         assertThat(tagName, is(tag.getTagName()));
+
+        localRepository = service.getRepository();
         AnyObjectId tagId = localRepository.resolve(tagName);
         assertThat(tagId.name(), is(tag.getStringRepresentation()));
         RevTag revTag = new RevWalk(localRepository).parseTag(tagId);
