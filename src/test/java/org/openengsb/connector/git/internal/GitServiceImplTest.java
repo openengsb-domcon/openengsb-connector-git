@@ -202,9 +202,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = NullPointerException.class)
     public void getFileFromCommitByNonExistingRef_shouldThrowSCMException() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-        service.get("testfile", new GitCommitRef(null));
+        service.startPoller();
+        byte bytecontent[] = service.get("testfile", new GitCommitRef(null));
+        String content = new String(bytecontent);
+        assertThat(content, is("testfile"));
     }
 
     @Test
