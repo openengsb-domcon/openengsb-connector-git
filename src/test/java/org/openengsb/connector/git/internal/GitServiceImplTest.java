@@ -220,12 +220,13 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void removeFileFromRepository_shouldReturnNewCommitRefAndDeleteFile() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-        AnyObjectId headId = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        service.startPoller();
+
+        AnyObjectId headId = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit head = rw.parseCommit(headId);
         rw.release();
+        service.update();
 
         CommitRef ref = service.remove("remove", "testfile");
         assertThat(head.name(), not(ref.getStringRepresentation()));
