@@ -237,12 +237,11 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void removeDirectoryFromRepository_shouldReturnNewCommitRefAndDeleteFiles() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.startPoller();
 
         String dir = "testDirectory";
         String file = "testFile";
-        File parent = new File(localDirectory, dir);
+        File parent = new File(remoteDirectory, dir);
         parent.mkdirs();
         File child = new File(parent, file);
         FileWriter fw = new FileWriter(child);
@@ -250,14 +249,15 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         fw.close();
         assertThat(child.exists(), is(true));
 
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         git.add().addFilepattern(dir + "/" + file).call();
         git.commit().setMessage("comment").call();
 
-        AnyObjectId headId = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        AnyObjectId headId = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit head = rw.parseCommit(headId);
         rw.release();
+        service.update();
 
         CommitRef ref = service.remove("remove", dir);
         assertThat(head.name(), not(ref.getStringRepresentation()));
