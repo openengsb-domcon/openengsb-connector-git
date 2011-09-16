@@ -183,17 +183,17 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void getFileFromCommitByRef_shouldReturnFileWithCorrectContent() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
+        service.startPoller();
         String fileName = "myFile";
 
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-        AnyObjectId head = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        AnyObjectId head = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit headCommit = rw.parseCommit(head);
         rw.release();
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
+        service.update();
 
         byte[] file = service.get("testfile", new GitCommitRef(headCommit));
         List<String> lines = IOUtils.readLines(new ByteArrayInputStream(file));
