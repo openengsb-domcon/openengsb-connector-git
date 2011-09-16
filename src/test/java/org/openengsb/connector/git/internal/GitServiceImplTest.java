@@ -351,7 +351,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void tagEmptyRepoWithName_shouldThrowSCMException() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
+        /* FIXME: This test needs its own empty local repo, don't start the poller */
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         localRepository = builder.setWorkTree(localDirectory).build();
         localRepository.create();
