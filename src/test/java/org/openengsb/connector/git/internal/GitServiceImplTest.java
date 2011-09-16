@@ -106,8 +106,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void exportRepository_shouldReturnZipFileWithRepoEntries() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.startPoller();
 
         String dir = "testDirectory";
         String file = "myTestFile";
@@ -119,9 +118,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         fw.close();
 
         String pattern = dir + "/" + file;
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         git.add().addFilepattern(pattern).call();
         git.commit().setMessage("My msg").call();
+        service.update();
 
         byte[] export = service.export();
         ZipFile zipFile = createZipFileFromByteArray(export);
