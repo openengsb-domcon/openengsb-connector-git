@@ -317,8 +317,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void tagHeadAgainWithSameName_shouldThrowSCMException() throws Exception {
-        /* Don't start the poller in this test, it doesn't configure a proper remote */
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.startPoller();
+
+        localRepository = service.getRepository();
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
