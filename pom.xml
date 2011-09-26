@@ -33,6 +33,7 @@
     <bundle.namespace>org.openengsb.connector.git</bundle.namespace>
     <jgit.version>0.10.1</jgit.version>
     <commons.compress.version>1.1</commons.compress.version>
+    <jsch.wrapped.version>0.1.42.w1</jsch.wrapped.version>
     <openengsb.domain.version>2.0.0-SNAPSHOT</openengsb.domain.version>
     <openengsb.domain.range>[2.0,3)</openengsb.domain.range>
   </properties>
