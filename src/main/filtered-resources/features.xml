@@ -26,7 +26,7 @@
     <feature version="${openengsb.domain.range}">openengsb-domain-scm</feature>
     <bundle>mvn:org.eclipse.jgit/org.eclipse.jgit/${jgit.version}</bundle>
     <bundle>mvn:org.apache.commons/commons-compress/${commons.compress.version}</bundle>
-    <bundle>mvn:org.openengsb.connector/openengsb-connector-git/${project.version}</bundle>
+    <bundle>mvn:org.openengsb.connector/org.openengsb.connector.git/${project.version}</bundle>
   </feature>
 </features>
 
