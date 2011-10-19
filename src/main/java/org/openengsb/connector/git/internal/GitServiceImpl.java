@@ -17,27 +17,32 @@
 
 package org.openengsb.connector.git.internal;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.TagCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.NoFilepatternException;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheCheckout;
+import org.eclipse.jgit.errors.UnmergedPathException;
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.NullProgressMonitor;
@@ -63,6 +68,10 @@ import org.openengsb.domain.scm.ScmException;
 import org.openengsb.domain.scm.TagRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 
 public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements ScmDomain {
     private static final Logger LOGGER = LoggerFactory.getLogger(GitServiceImpl.class);
@@ -169,8 +178,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     /**
-     * Checks if the {@code localWorkspace} is set and creates the relevant
-     * directories if necessary.
+     * Checks if the {@code localWorkspace} is set and creates the relevant directories if necessary.
      */
     private void prepareWorkspace() {
         if (localWorkspace == null) {
@@ -198,8 +206,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     /**
-     * Initializes the {@link FileRepository} or creates a new own if it does
-     * not exist.
+     * Initializes the {@link FileRepository} or creates a new own if it does not exist.
      */
     private void initRepository() throws IOException {
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
@@ -266,27 +273,42 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public File export() {
-        try {
-            if (repository == null) {
-                initRepository();
-            }
+    public byte[] export() {
+        initializeIfEmpty();
+        return packLocalWorkspaceToByteArray();
+    }
 
-            LOGGER.debug("Exporting repository to archive");
-            File tmp = File.createTempFile("repository", ".zip");
-            ZipArchiveOutputStream zos = new ZipArchiveOutputStream(tmp);
+    private byte[] packLocalWorkspaceToByteArray() {
+        LOGGER.debug("Exporting repository to archive");
+        ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+        ZipArchiveOutputStream zos = new ZipArchiveOutputStream(byteArrayOutput);
+        try {
             packRepository(localWorkspace, zos);
-            zos.close();
-            return tmp;
         } catch (IOException e) {
-            throw new ScmException(e);
+            throw new ScmException("could not pack repository", e);
+        } finally {
+            IOUtils.closeQuietly(zos);
+        }
+        try {
+            return byteArrayOutput.toByteArray();
+        } finally {
+            IOUtils.closeQuietly(byteArrayOutput);
+        }
+    }
+
+    private void initializeIfEmpty() {
+        if (repository == null) {
+            try {
+                initRepository();
+            } catch (IOException e) {
+                throw new ScmException(e);
+            }
         }
     }
 
     @Override
-    public File export(CommitRef ref) {
+    public byte[] export(CommitRef ref) {
         RevWalk rw = null;
-        File tmp = null;
         try {
             if (repository == null) {
                 initRepository();
@@ -305,14 +327,11 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             LOGGER.debug("Checking out working copy of revision");
             checkoutIndex(commit);
 
-            tmp = File.createTempFile("repository", ".zip");
-            LOGGER.debug("Exporting repository to archive");
-            ZipArchiveOutputStream zos = new ZipArchiveOutputStream(tmp);
-            packRepository(localWorkspace, zos);
-            zos.close();
+            byte[] result = packLocalWorkspaceToByteArray();
 
             LOGGER.debug("Checking out working copy of former HEAD revision");
             checkoutIndex(head);
+            return result;
         } catch (IOException e) {
             throw new ScmException(e);
         } finally {
@@ -320,12 +339,10 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
                 rw.release();
             }
         }
-        return tmp;
     }
 
     /**
-     * Packs the files and directories of a passed {@link File} to a passed
-     * {@link ArchiveOutputStream}.
+     * Packs the files and directories of a passed {@link File} to a passed {@link ArchiveOutputStream}.
      *
      * @throws IOException
      */
@@ -420,7 +437,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             AnyObjectId id = repository.resolve(Constants.HEAD);
             RevCommit commit = new RevWalk(repository).parseCommit(id);
             LOGGER.debug("Looking up file {} in HEAD revision", arg0);
-            TreeWalk treeWalk = TreeWalk.forPath(repository, arg0, new AnyObjectId[] { commit.getTree() });
+            TreeWalk treeWalk = TreeWalk.forPath(repository, arg0, new AnyObjectId[]{ commit.getTree() });
             if (treeWalk == null) {
                 return false;
             }
@@ -433,34 +450,39 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public File get(String file) {
+    public byte[] get(String file) {
+        initializeIfEmpty();
+        TreeWalk treeWalk;
         try {
-            if (repository == null) {
-                initRepository();
-            }
             AnyObjectId id = repository.resolve(Constants.HEAD);
             RevCommit commit = new RevWalk(repository).parseCommit(id);
             LOGGER.debug("Looking up file {} in HEAD revision", file);
-            TreeWalk treeWalk = TreeWalk.forPath(repository, file, new AnyObjectId[] { commit.getTree() });
-            if (treeWalk == null) {
-                return null;
-            }
-            ObjectId objectId = treeWalk.getObjectId(treeWalk.getTreeCount() - 1);
-            if (objectId == ObjectId.zeroId()) {
-                LOGGER.debug("File {} couldn't be found in HEAD revision", file);
-                return null;
-            }
-            String fileName = getFilename(file);
-            LOGGER.debug("Creating file from saved repository content");
-            File tmp = File.createTempFile(fileName, null);
-            tmp.deleteOnExit();
-            OutputStream os = new FileOutputStream(tmp);
-            os.write(repository.open(objectId).getCachedBytes());
-            os.close();
-            return tmp;
-        } catch (Exception e) {
-            throw new ScmException(e);
+            treeWalk = TreeWalk.forPath(repository, file, new AnyObjectId[]{ commit.getTree() });
+        } catch (IOException e) {
+            throw new ScmException("Error while walking repository tree", e);
         }
+        if (treeWalk == null) {
+            return null;
+        }
+        ObjectId objectId = treeWalk.getObjectId(treeWalk.getTreeCount() - 1);
+        if (objectId == ObjectId.zeroId()) {
+            LOGGER.debug("File {} couldn't be found in HEAD revision", file);
+            return null;
+        }
+        return packObjectIdToByteArray(objectId);
+    }
+
+    private byte[] packObjectIdToByteArray(ObjectId objectId) {
+        LOGGER.debug("Creating file from saved repository content");
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            os.write(repository.open(objectId).getCachedBytes());
+        } catch (IOException e) {
+            throw new ScmException("Error reading file", e);
+        } finally {
+            IOUtils.closeQuietly(os);
+        }
+        return os.toByteArray();
     }
 
     @Override
@@ -469,7 +491,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             AnyObjectId id = repository.resolve(arg1.getStringRepresentation());
             RevCommit commit = new RevWalk(repository).parseCommit(id);
             LOGGER.debug("Looking up file {} in revision {}", arg0, arg1.getStringRepresentation());
-            TreeWalk treeWalk = TreeWalk.forPath(repository, arg0, new AnyObjectId[] { commit.getTree() });
+            TreeWalk treeWalk = TreeWalk.forPath(repository, arg0, new AnyObjectId[]{ commit.getTree() });
             if (treeWalk == null) {
                 return false;
             }
@@ -482,46 +504,27 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public File get(String file, CommitRef ref) {
+    public byte[] get(String file, CommitRef ref) {
+        initializeIfEmpty();
+        Preconditions.checkNotNull(ref.getStringRepresentation());
+
+        TreeWalk treeWalk;
         try {
-            if (repository == null) {
-                initRepository();
-            }
             AnyObjectId id = repository.resolve(ref.getStringRepresentation());
             RevCommit commit = new RevWalk(repository).parseCommit(id);
             LOGGER.debug("Looking up file {} in revision {}", file, ref.getStringRepresentation());
-            TreeWalk treeWalk = TreeWalk.forPath(repository, file, new AnyObjectId[] { commit.getTree() });
-            if (treeWalk == null) {
-                return null;
-            }
-            ObjectId objectId = treeWalk.getObjectId(treeWalk.getTreeCount() - 1);
-            if (objectId == ObjectId.zeroId()) {
-                return null;
-            }
-            String fileName = getFilename(file);
-            LOGGER.debug("Creating file from saved repository content");
-            File tmp = File.createTempFile(fileName, null);
-            tmp.deleteOnExit();
-            OutputStream os = new FileOutputStream(tmp);
-            os.write(repository.open(objectId).getCachedBytes());
-            os.close();
-            return tmp;
-        } catch (Exception e) {
-            throw new ScmException(e);
+            treeWalk = TreeWalk.forPath(repository, file, new AnyObjectId[]{ commit.getTree() });
+        } catch (IOException e) {
+            throw new ScmException("Error while walking repository tree", e);
         }
-    }
-
-    /**
-     * Returns the name of a file from a passed repository path.
-     */
-    private String getFilename(String path) {
-        String fileName;
-        if (path.contains("/")) {
-            fileName = path.substring(path.lastIndexOf("/") + 1);
-        } else {
-            fileName = path;
+        if (treeWalk == null) {
+            return null;
         }
-        return fileName;
+        ObjectId objectId = treeWalk.getObjectId(treeWalk.getTreeCount() - 1);
+        if (objectId == ObjectId.zeroId()) {
+            return null;
+        }
+        return packObjectIdToByteArray(objectId);
     }
 
     @Override
@@ -544,11 +547,9 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public CommitRef add(String comment, File... file) {
-        if (file.length == 0) {
-            LOGGER.debug("No files to add in list");
-            return null;
-        }
+    public CommitRef add(String comment, String path, byte[] content) {
+        File file = new File(path);
+        Preconditions.checkArgument(!file.isAbsolute(), "must not commit to absolute paths");
         if (repository == null) {
             prepareWorkspace();
             try {
@@ -563,27 +564,104 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
 
         Git git = new Git(repository);
         AddCommand add = git.add();
+        safelyUpdateFileContent(path, content);
+
+        LOGGER.debug("Adding file {} in working directory to repository", path);
+        add.addFilepattern(path);
+
         try {
-            for (File toCommit : file) {
-                if (!toCommit.exists()) {
-                    throw new ScmException("File " + toCommit + " is not a valid file to commit.");
+            add.call();
+        } catch (NoFilepatternException e) {
+            throw new ScmException("add-command failed", e);
+        }
+        LOGGER.debug("Committing added files with comment '{}'", comment);
+        try {
+            return new GitCommitRef(git.commit().setMessage(comment).call());
+        } catch (GitAPIException e) {
+            throw new ScmException("Error while committing to git-repo", e);
+        } catch (UnmergedPathException e) {
+            throw new ScmException(e);
+        }
+
+    }
+
+    @Override
+    public CommitRef add(String comment, Map<String, byte[]> files) {
+        if (repository == null) {
+            prepareWorkspace();
+            try {
+                initRepository();
+            } catch (IOException e) {
+                if (repository != null) {
+                    repository.close();
                 }
-                String filepattern = getRelativePath(toCommit.getAbsolutePath());
-                LOGGER.debug("Adding file {} in working directory to repository", filepattern);
-                add.addFilepattern(filepattern);
+                throw new ScmException(e);
+            }
+        }
+        boolean allRelative = Iterators.all(files.keySet().iterator(), new Predicate<String>() {
+            @Override
+            public boolean apply(String path) {
+                return !new File(path).isAbsolute();
             }
 
+        });
+        Preconditions.checkArgument(allRelative, "must not commit to absolute paths");
+
+        Git git = new Git(repository);
+        AddCommand add = git.add();
+        for (Map.Entry<String, byte[]> entry : files.entrySet()) {
+            String path = entry.getKey();
+            byte[] content = entry.getValue();
+            safelyUpdateFileContent(path, content);
+            LOGGER.debug("Adding file {} in working directory to repository", path);
+            add.addFilepattern(path);
+        }
+
+        try {
             add.call();
-            LOGGER.debug("Committing added files with comment '{}'", comment);
+        } catch (NoFilepatternException e) {
+            throw new ScmException("add-command failed", e);
+        }
+        LOGGER.debug("Committing added files with comment '{}'", comment);
+        try {
             return new GitCommitRef(git.commit().setMessage(comment).call());
-        } catch (Exception e) {
+        } catch (GitAPIException e) {
+            throw new ScmException("Error while committing to git-repo", e);
+        } catch (UnmergedPathException e) {
             throw new ScmException(e);
         }
     }
 
+    private void safelyUpdateFileContent(String path, byte[] content) {
+        File repoFile = new File(localWorkspace, path);
+        File backupFile = null;
+
+        try {
+            File newFile = File.createTempFile("openengsb-connector-git", "new");
+            FileUtils.writeByteArrayToFile(newFile, content);
+            if (repoFile.exists()) {
+                backupFile = File.createTempFile("openengsb-connector-git", "old");
+                backupFile.delete();
+                FileUtils.moveFile(repoFile, backupFile);
+                try {
+                    FileUtils.moveFile(newFile, repoFile);
+                } catch (IOException e) {
+                    FileUtils.moveFile(backupFile, repoFile);
+                }
+                FileUtils.deleteQuietly(backupFile);
+                backupFile = null;
+            } else {
+                FileUtils.moveFile(newFile, repoFile);
+            }
+        } catch (IOException e) {
+            throw new ScmException("error while creating or updating file", e);
+        }
+
+    }
+
     /**
-     * Returns the relative path of an absolute {@code filePath} in comparison
-     * to the working directory of the repository.
+     * Returns the relative path of an absolute {@code filePath} in comparison to the working directory of the
+     * repository.
      */
     private String getRelativePath(String filePath) {
         final String repoPath = repository.getWorkTree().getAbsolutePath();
@@ -595,7 +673,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public CommitRef remove(String comment, File... file) {
+    public CommitRef remove(String comment, String... file) {
         if (file.length == 0) {
             LOGGER.debug("No files to add in list");
             return null;
@@ -616,13 +694,13 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         Git git = new Git(repository);
         RmCommand rm = git.rm();
         try {
-            for (File toCommit : file) {
-                if (!toCommit.exists()) {
+            for (String toCommit : file) {
+                File file2 = new File(localWorkspace, toCommit);
+                if (!file2.exists()) {
                     throw new ScmException("File " + toCommit + " is not a valid file to commit.");
                 }
-                String filepattern = getRelativePath(toCommit.getAbsolutePath());
-                LOGGER.debug("Removing file {} in working directory from repository", filepattern);
-                rm.addFilepattern(filepattern);
+                LOGGER.debug("Removing file {} in working directory from repository", toCommit);
+                rm.addFilepattern(toCommit);
             }
 
             rm.call();
