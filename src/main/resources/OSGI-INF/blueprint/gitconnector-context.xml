@@ -31,7 +31,6 @@
     </service-properties>
     <bean class="org.openengsb.connector.git.internal.GitServiceInstanceFactory">
       <property name="scmEvents" ref="scmEvents" />
-      <property name="ekbService" ref="ekbService" />  
     </bean>
   </service>
 
@@ -50,6 +49,5 @@
   </service>
   
   <reference id="scmEvents" interface="org.openengsb.domain.scm.ScmDomainEvents" />
-  <reference id="ekbService" interface="org.openengsb.core.api.ekb.EngineeringKnowledgeBaseService" />
   
 </blueprint>
