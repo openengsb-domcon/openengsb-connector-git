@@ -36,6 +36,8 @@ public class GitConnectorProvider extends AbstractConnectorProvider {
                 .description("service.branch.description").build());
         builder.attribute(builder.newAttribute().id("submodulesHack").name("service.submodulesHack.name")
             .description("service.submodulesHack.description").asBoolean().build());
+        builder.attribute(builder.newAttribute().id("pollInterval").name("service.pollInterval.name")
+            .description("service.pollInterval.description").build());
         return builder.build();
     }
 }
