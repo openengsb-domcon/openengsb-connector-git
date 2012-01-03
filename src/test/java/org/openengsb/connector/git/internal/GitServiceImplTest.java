@@ -23,16 +23,16 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import junit.framework.Assert;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TagCommand;
 import org.eclipse.jgit.lib.AnyObjectId;
@@ -117,18 +117,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         git.add().addFilepattern(pattern).call();
         git.commit().setMessage("My msg").call();
 
-        byte[] export = service.export();
-        ZipFile zipFile = createZipFileFromByteArray(export);
+        ZipFile zipFile = new ZipFile(service.export());
         assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
         assertThat(zipFile.getEntry(dir + "/").getName(), is(dir + "/"));
         assertThat(zipFile.getEntry(dir + File.separator + file).getName(), is(dir + File.separator + file));
-    }
-
-    private ZipFile createZipFileFromByteArray(byte[] export) throws IOException, ZipException {
-        File tmpFile = File.createTempFile("git-repo-export-test", "zip");
-        FileUtils.writeByteArrayToFile(tmpFile, export);
-        ZipFile zipFile = new ZipFile(tmpFile);
-        return zipFile;
     }
 
     public void exportRepositoryByRef_shouldReturnZipFileWithRepoEntries() throws Exception {
@@ -153,7 +145,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RevCommit head = rw.parseCommit(headId);
         rw.release();
 
-        ZipFile zipFile = createZipFileFromByteArray(service.export(new GitCommitRef(head)));
+        ZipFile zipFile = new ZipFile(service.export(new GitCommitRef(head)));
         assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
         assertThat(zipFile.getEntry(dir + "/").getName(), is(dir + "/"));
         assertThat(zipFile.getEntry(dir + "\\" + file).getName(), is(dir + "\\" + file));
@@ -168,9 +160,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
 
-        byte[] file = service.get(fileName);
-        List<String> lines = IOUtils.readLines(new ByteArrayInputStream(file));
-        assertThat(lines.get(0), is(fileName));
+        File file = service.get(fileName);
+        String content = new BufferedReader(new FileReader(file)).readLine();
+        assertThat(content, is(fileName));
     }
 
     @Test
@@ -186,24 +178,49 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
 
-        byte[] file = service.get("testfile", new GitCommitRef(headCommit));
-        List<String> lines = IOUtils.readLines(new ByteArrayInputStream(file));
-        assertThat(lines.get(0), is("testfile"));
+        File file = service.get("testfile", new GitCommitRef(headCommit));
+        String content = new BufferedReader(new FileReader(file)).readLine();
+        assertThat(content, is("testfile"));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test(expected = ScmException.class)
     public void getFileFromCommitByNonExistingRef_shouldThrowSCMException() throws Exception {
         localRepository = RepositoryFixture.createRepository(localDirectory);
-        service.get("testfile", new GitCommitRef(null));
+
+        File file = service.get("testfile", new GitCommitRef(null));
+        String content = new BufferedReader(new FileReader(file)).readLine();
+        assertThat(content, is("testfile"));
     }
 
     @Test
     public void addFile_shouldReturnHeadReference() throws IOException {
-        byte[] content = "testfile".getBytes();
-        CommitRef commitRef = service.add("testcomment", "testfile", content);
+        File toCommit = new File(localDirectory, "testfile");
+        toCommit.createNewFile();
+        CommitRef commitRef = service.add("testcomment", toCommit);
         assertThat(commitRef, notNullValue());
         localRepository = service.getRepository();
         assertThat(commitRef.getStringRepresentation(), is(localRepository.resolve(Constants.HEAD).name()));
+    }
+
+    @Test
+    public void addNonExistingFile_shouldRaiseException() throws IOException {
+        File toCommit = new File(localDirectory, "testfile");
+        try {
+            service.add("testcomment", toCommit);
+            Assert.fail("Should have thrown an exception");
+        } catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void addFileNotInWorkingfolder_shouldRaiseException() throws IOException {
+        File toCommit = tempFolder.newFile("testfile");
+        toCommit.createNewFile();
+        try {
+            service.add("testcomment", toCommit);
+            Assert.fail("Should have thrown an exception");
+        } catch (Exception e) {
+        }
     }
 
     @Test
@@ -214,7 +231,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RevCommit head = rw.parseCommit(headId);
         rw.release();
 
-        CommitRef ref = service.remove("remove", "testfile");
+        CommitRef ref = service.remove("remove", new File(localDirectory, "testfile"));
         assertThat(head.name(), not(ref.getStringRepresentation()));
 
         File removed = new File(localDirectory, "testfile");
@@ -244,7 +261,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RevCommit head = rw.parseCommit(headId);
         rw.release();
 
-        CommitRef ref = service.remove("remove", dir);
+        CommitRef ref = service.remove("remove", new File(localDirectory, dir));
         assertThat(head.name(), not(ref.getStringRepresentation()));
 
         File removed = new File(localDirectory, dir + "/" + file);
@@ -253,30 +270,46 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void existsFilenameInHeadCommit_shouldReturnTrue() throws IOException {
-        service.add("testcomment", "commitOne", "1".getBytes());
-        service.add("testcomment", "file2", "2".getBytes());
+        File commitOne = new File(localDirectory, "commitOne");
+        File commitTwo = new File(localDirectory, "commitTwo");
+        commitOne.createNewFile();
+        commitTwo.createNewFile();
+        service.add("testcomment", commitOne);
+        service.add("testcomment", commitTwo);
         assertThat(service.exists("commitOne"), is(true));
     }
 
     @Test
     public void existsFilenameInReferencedCommit_shouldReturnTrue() throws IOException {
-        CommitRef commitRef = service.add("testcomment", "commitOne", "1".getBytes());
-        service.add("testcomment", "file2", "2".getBytes());
-        assertThat(service.exists("commitOne", commitRef), is(true));
+        File commitOne = new File(localDirectory, "commitOne");
+        File commitTwo = new File(localDirectory, "commitTwo");
+        commitOne.createNewFile();
+        commitTwo.createNewFile();
+        CommitRef commitRefOne = service.add("testcomment", commitOne);
+        service.add("testcomment", commitTwo);
+        assertThat(service.exists("commitOne", commitRefOne), is(true));
     }
 
     @Test
     public void existsFilenameOfNotExistingFile_shouldReturnFalse() throws IOException {
-        service.add("testcomment", "commitOne", "1".getBytes());
-        service.add("testcomment", "commitTwo", "2".getBytes());
+        File commitOne = new File(localDirectory, "commitOne");
+        File commitTwo = new File(localDirectory, "commitTwo");
+        commitOne.createNewFile();
+        commitTwo.createNewFile();
+        service.add("testcomment", commitOne);
+        service.add("testcomment", commitTwo);
         assertThat(service.exists("commitThree"), is(false));
     }
 
     @Test
     public void existsFilenameInPriorCommitToFilecommit_shouldReturnFalse() throws IOException {
-        CommitRef commitRef = service.add("testcomment", "commitOne", "1".getBytes());
-        service.add("testcomment", "file2", "2".getBytes());
-        assertThat(service.exists("file2", commitRef), is(false));
+        File commitOne = new File(localDirectory, "commitOne");
+        File commitTwo = new File(localDirectory, "commitTwo");
+        commitOne.createNewFile();
+        commitTwo.createNewFile();
+        CommitRef commitRefOne = service.add("testcomment", commitOne);
+        service.add("testcomment", commitTwo);
+        assertThat(service.exists("commitTwo", commitRefOne), is(false));
     }
 
     @Test
@@ -340,7 +373,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         CommitRef commitRef = service.getCommitRefForTag(tag);
         assertThat(head.name(), is(commitRef.getStringRepresentation()));
     }
-
+    
     @Test
     public void changeRemoteLocation_ShouldChangeRemoteLocation() {
         service.setRemoteLocation("testLoc");
