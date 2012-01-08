@@ -171,14 +171,15 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     public void getFileFromCommitByRef_shouldReturnFileWithCorrectContent() throws Exception {
         String fileName = "myFile";
 
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-        AnyObjectId head = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        AnyObjectId head = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit headCommit = rw.parseCommit(head);
         rw.release();
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
+
+        service.update();
 
         File file = service.get("testfile", new GitCommitRef(headCommit));
         String content = new BufferedReader(new FileReader(file)).readLine();
