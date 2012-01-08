@@ -188,11 +188,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void getFileFromCommitByNonExistingRef_shouldThrowSCMException() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
-        File file = service.get("testfile", new GitCommitRef(null));
+        File file = service.get("testfile_does_not_exist", new GitCommitRef(null));
         String content = new BufferedReader(new FileReader(file)).readLine();
-        assertThat(content, is("testfile"));
+        assertThat(content, is("testfile_does_not_exist"));
     }
 
     @Test
