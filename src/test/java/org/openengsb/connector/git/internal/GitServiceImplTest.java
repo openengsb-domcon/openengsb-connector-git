@@ -331,7 +331,6 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void tagHeadAgainWithSameName_shouldThrowSCMException() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
