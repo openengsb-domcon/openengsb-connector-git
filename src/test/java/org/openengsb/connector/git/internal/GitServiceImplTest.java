@@ -70,10 +70,11 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     }
 
     @Test
-    public void update_shouldPullChangesIntoLocalBranch() {
+    public void update_shouldPullChangesIntoLocalBranch() throws Exception {
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
-        assertThat(new File(localDirectory, "testfile").isFile(), is(true));
+        ZipFile zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
     }
 
     @Test
@@ -83,10 +84,12 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, "second");
         RepositoryFixture.commit(git, "second commit");
-        assertThat(new File(localDirectory, "second").isFile(), is(false));
+        ZipFile zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("second"), is(nullValue()));
         List<CommitRef> updateTwo = service.update();
         assertThat(updateTwo.size(), is(1));
-        assertThat(new File(localDirectory, "second").isFile(), is(true));
+        zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("second").getName(), is("second"));
         List<CommitRef> updateThree = service.update();
         assertThat(updateThree.size(), is(0));
     }
