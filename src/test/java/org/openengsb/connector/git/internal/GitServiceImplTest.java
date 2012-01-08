@@ -41,6 +41,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.Test;
 import org.openengsb.connector.git.domain.GitCommitRef;
@@ -315,7 +316,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void tagHeadWithName_shouldReturnTagRefWithName() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.update();
+        FileRepository localRepository = service.getRepository();
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
