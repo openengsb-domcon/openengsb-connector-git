@@ -348,7 +348,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void tagCommitRefWithName_shouldReturnTagRefWithName() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.update();
+        FileRepository localRepository = service.getRepository();
         RevWalk walk = new RevWalk(localRepository);
         RevCommit head = walk.lookupCommit(localRepository.resolve(Constants.HEAD));
         CommitRef ref = new GitCommitRef(head);
