@@ -103,11 +103,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void exportRepository_shouldReturnZipFileWithRepoEntries() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
         String dir = "testDirectory";
         String file = "myTestFile";
-        File parent = new File(localDirectory, dir);
+        File parent = new File(remoteDirectory, dir);
         parent.mkdirs();
         File child = new File(parent, file);
         FileWriter fw = new FileWriter(child);
@@ -115,9 +113,11 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         fw.close();
 
         String pattern = dir + "/" + file;
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         git.add().addFilepattern(pattern).call();
         git.commit().setMessage("My msg").call();
+
+        service.update();
 
         ZipFile zipFile = new ZipFile(service.export());
         assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
