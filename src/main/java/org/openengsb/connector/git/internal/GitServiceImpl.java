@@ -18,8 +18,6 @@
 package org.openengsb.connector.git.internal;
 
 import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -28,9 +26,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveOutputStream;
-import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
@@ -56,7 +52,9 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.openengsb.connector.git.domain.GitCommitRef;
 import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.core.api.AliveState;
+import org.openengsb.core.api.model.OpenEngSBFileModel;
 import org.openengsb.core.common.AbstractOpenEngSBConnectorService;
+import org.openengsb.core.common.util.ModelUtils;
 import org.openengsb.domain.scm.CommitRef;
 import org.openengsb.domain.scm.ScmDomain;
 import org.openengsb.domain.scm.ScmException;
@@ -265,26 +263,32 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         }
     }
 
+    private OpenEngSBFileModel createFileModel(File f) {
+        OpenEngSBFileModel model = ModelUtils.createEmptyModelObject(OpenEngSBFileModel.class);
+        model.setFile(f);
+        return model;
+    }
+
     @Override
-    public File export() {
+    public OpenEngSBFileModel export() {
         try {
             if (repository == null) {
                 initRepository();
             }
 
-            LOGGER.debug("Exporting repository to archive");
-            File tmp = File.createTempFile("repository", ".zip");
-            ZipArchiveOutputStream zos = new ZipArchiveOutputStream(tmp);
-            packRepository(localWorkspace, zos);
-            zos.close();
-            return tmp;
+            LOGGER.debug("Exporting repository to OpenEngSBFileModel");
+            File tmp = File.createTempFile("repository", "");
+            tmp.delete();
+            tmp.mkdir();
+            FileUtils.copyDirectory(localWorkspace, tmp);
+            return createFileModel(tmp);
         } catch (IOException e) {
             throw new ScmException(e);
         }
     }
 
     @Override
-    public File export(CommitRef ref) {
+    public OpenEngSBFileModel export(CommitRef ref) {
         RevWalk rw = null;
         File tmp = null;
         try {
@@ -305,12 +309,11 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             LOGGER.debug("Checking out working copy of revision");
             checkoutIndex(commit);
 
-            tmp = File.createTempFile("repository", ".zip");
-            LOGGER.debug("Exporting repository to archive");
-            ZipArchiveOutputStream zos = new ZipArchiveOutputStream(tmp);
-            packRepository(localWorkspace, zos);
-            zos.close();
-
+            tmp = File.createTempFile("repository", "");
+            tmp.delete();
+            tmp.mkdir();
+            LOGGER.debug("Exporting repository to OpenEngSBFileModel");
+            FileUtils.copyDirectory(localWorkspace, tmp);
             LOGGER.debug("Checking out working copy of former HEAD revision");
             checkoutIndex(head);
         } catch (IOException e) {
@@ -320,42 +323,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
                 rw.release();
             }
         }
-        return tmp;
-    }
-
-    /**
-     * Packs the files and directories of a passed {@link File} to a passed
-     * {@link ArchiveOutputStream}.
-     *
-     * @throws IOException
-     */
-    private void packRepository(File source, ArchiveOutputStream aos) throws IOException {
-        int bufferSize = 2048;
-        byte[] readBuffer = new byte[bufferSize];
-        int bytesIn = 0;
-        File[] files = source.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                return !pathname.getName().equals(Constants.DOT_GIT);
-            }
-        });
-        for (File file : files) {
-            if (file.isDirectory()) {
-                ArchiveEntry ae = aos.createArchiveEntry(file, getRelativePath(file.getAbsolutePath()));
-                aos.putArchiveEntry(ae);
-                aos.closeArchiveEntry();
-                packRepository(file, aos);
-            } else {
-                FileInputStream fis = new FileInputStream(file);
-                ArchiveEntry ae = aos.createArchiveEntry(file, getRelativePath(file.getAbsolutePath()));
-                aos.putArchiveEntry(ae);
-                while ((bytesIn = fis.read(readBuffer)) != -1) {
-                    aos.write(readBuffer, 0, bytesIn);
-                }
-                aos.closeArchiveEntry();
-                fis.close();
-            }
-        }
+        return createFileModel(tmp);
     }
 
     private void checkoutIndex(RevCommit commit) {
@@ -434,7 +402,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public File get(String file) {
+    public OpenEngSBFileModel get(String file) {
         try {
             if (repository == null) {
                 initRepository();
@@ -458,7 +426,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             OutputStream os = new FileOutputStream(tmp);
             os.write(repository.open(objectId).getCachedBytes());
             os.close();
-            return tmp;
+            return createFileModel(tmp);
         } catch (Exception e) {
             throw new ScmException(e);
         }
@@ -483,7 +451,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     @Override
-    public File get(String file, CommitRef ref) {
+    public OpenEngSBFileModel get(String file, CommitRef ref) {
         try {
             if (repository == null) {
                 initRepository();
@@ -506,7 +474,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             OutputStream os = new FileOutputStream(tmp);
             os.write(repository.open(objectId).getCachedBytes());
             os.close();
-            return tmp;
+            return createFileModel(tmp);
         } catch (Exception e) {
             throw new ScmException(e);
         }

@@ -74,8 +74,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     public void update_shouldPullChangesIntoLocalBranch() throws Exception {
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
-        ZipFile zipFile = new ZipFile(service.export());
-        assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
+        File f = service.export().getFile();
+        assertThat(new File(f, "testfile").isFile(), is(true));
     }
 
     @Test
@@ -85,12 +85,13 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, "second");
         RepositoryFixture.commit(git, "second commit");
-        ZipFile zipFile = new ZipFile(service.export());
-        assertThat(zipFile.getEntry("second"), is(nullValue()));
+
+        File f = service.export().getFile();
+        assertThat(new File(f, "second").isFile(), is(false));
         List<CommitRef> updateTwo = service.update();
         assertThat(updateTwo.size(), is(1));
-        zipFile = new ZipFile(service.export());
-        assertThat(zipFile.getEntry("second").getName(), is("second"));
+        f = service.export().getFile();
+        assertThat(new File(f, "second").isFile(), is(true));
         List<CommitRef> updateThree = service.update();
         assertThat(updateThree.size(), is(0));
     }
@@ -103,7 +104,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     }
 
     @Test
-    public void exportRepository_shouldReturnZipFileWithRepoEntries() throws Exception {
+    public void exportRepository_shouldReturnFileModelWithRepoEntries() throws Exception {
         String dir = "testDirectory";
         String file = "myTestFile";
         File parent = new File(remoteDirectory, dir);
@@ -120,13 +121,13 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
         service.update();
 
-        ZipFile zipFile = new ZipFile(service.export());
-        assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
-        assertThat(zipFile.getEntry(dir + "/").getName(), is(dir + "/"));
-        assertThat(zipFile.getEntry(dir + File.separator + file).getName(), is(dir + File.separator + file));
+        File f = service.export().getFile();
+        assertThat(new File(f, "testfile").isFile(), is(true));
+        assertThat(new File(f, dir + "/").isDirectory(), is(true));
+        assertThat(new File(f, dir + File.separator + file).isFile(), is(true));
     }
 
-    public void exportRepositoryByRef_shouldReturnZipFileWithRepoEntries() throws Exception {
+    public void exportRepositoryByRef_shouldReturnFileModelWithRepoEntries() throws Exception {
         String dir = "testDirectory";
         String file = "myTestFile";
         File parent = new File(remoteDirectory, dir);
@@ -148,10 +149,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
         service.update();
 
-        ZipFile zipFile = new ZipFile(service.export(new GitCommitRef(head)));
-        assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
-        assertThat(zipFile.getEntry(dir + "/").getName(), is(dir + "/"));
-        assertThat(zipFile.getEntry(dir + "\\" + file).getName(), is(dir + "\\" + file));
+        File f = service.export(new GitCommitRef(head)).getFile();
+        assertThat(new File(f, "testfile").isFile(), is(true));
+        assertThat(new File(f, dir + "/").isDirectory(), is(true));
+        assertThat(new File(f, dir + File.separator + file).isFile(), is(true));
     }
 
     @Test
@@ -163,7 +164,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
         service.update();
 
-        File file = service.get(fileName);
+        File file = service.get(fileName).getFile();
         String content = new BufferedReader(new FileReader(file)).readLine();
         assertThat(content, is(fileName));
     }
@@ -182,14 +183,14 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
         service.update();
 
-        File file = service.get("testfile", new GitCommitRef(headCommit));
+        File file = service.get("testfile", new GitCommitRef(headCommit)).getFile();
         String content = new BufferedReader(new FileReader(file)).readLine();
         assertThat(content, is("testfile"));
     }
 
     @Test(expected = ScmException.class)
     public void getFileFromCommitByNonExistingRef_shouldThrowSCMException() throws Exception {
-        File file = service.get("testfile_does_not_exist", new GitCommitRef(null));
+        File file = service.get("testfile_does_not_exist", new GitCommitRef(null)).getFile();
         String content = new BufferedReader(new FileReader(file)).readLine();
         assertThat(content, is("testfile_does_not_exist"));
     }
