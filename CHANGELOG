@@ -1,3 +1,36 @@
+openengsb-connector-git-2.0.0 2012-01-10
+---------------------------------------------------------------------
+
+In this release all all interfaces and implementations have been adapted to the latest 
+domain/openengsb versions. In addition EDB/EKB access has been implemented.
+
+** Bug
+    * [OPENENGSB-1977] - git-connector does not interpret relative paths correctly
+    * [OPENENGSB-2334] - adapt git connector to current openengsb-framework
+    * [OPENENGSB-2582] - Domains and Connectors need to include our snapshot repo to work with deployed snapshots correctly
+    * [OPENENGSB-2647] - domain.version.range does not follow semantic versioning
+
+** Improvement
+    * [OPENENGSB-1844] - Enhance git connector with EDB/EKB access
+    * [OPENENGSB-2577] - add short description to connector-manual
+    * [OPENENGSB-2586] - Include issuetracker, buildserver and inceptionYear from root
+
+** Library Upgrade
+    * [OPENENGSB-2123] - upgrade jgit to 1.1.0.201109151100-r
+    * [OPENENGSB-2385] - Upgrade to commons-compress 1.3
+    * [OPENENGSB-2645] - upgrade domain-scm to 2.0.0
+
+** Task
+    * [OPENENGSB-2122] - upgrade git-connector to framework-2.0 and domain-scm-2.0
+    * [OPENENGSB-2567] - move connector documentation to corresponding connector-repositories
+    * [OPENENGSB-2653] - Release connector-git-2.0.0
+    * [OPENENGSB-2660] - Rename CHANGELOG.md to CHANGELOG
+    * [OPENENGSB-2661] - use openengsb-connector-parent-2.4.0
+
+** Known Issues
+    * [OPENENGSB-1188] - git-connector should automatically accept unknown ssh-hostkeys
+
+
 openengsb-connector-git-1.2.4 2011-08-17
 ---------------------------------------------------------------------
 
