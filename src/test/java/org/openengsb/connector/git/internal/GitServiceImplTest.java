@@ -42,7 +42,9 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.openengsb.connector.git.domain.GitCommitRef;
 import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.domain.scm.CommitRef;
@@ -51,6 +53,9 @@ import org.openengsb.domain.scm.TagRef;
 
 public class GitServiceImplTest extends AbstractGitServiceImpl {
 
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
     @Test
     public void updateWithEmptyWorkspace_shouldCloneRemoteRepository() throws Exception {
         List<CommitRef> commits = service.update();
@@ -58,8 +63,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         ObjectId remote = service.getRepository().resolve("refs/remotes/origin/master");
         assertThat(remote, notNullValue());
         assertThat(remote, is(remoteRepository.resolve("refs/heads/master")));
-        assertThat(commits.get(0).getStringRepresentation(),
-            is(service.getRepository().resolve(Constants.HEAD).name()));
+        assertThat(commits.get(0).getStringRepresentation(), is(service.getRepository().resolve(Constants.HEAD).name()));
     }
 
     @Test
@@ -373,10 +377,18 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         CommitRef commitRef = service.getCommitRefForTag(tag);
         assertThat(head.name(), is(commitRef.getStringRepresentation()));
     }
-    
+
     @Test
     public void changeRemoteLocation_ShouldChangeRemoteLocation() {
         service.setRemoteLocation("testLoc");
         assertThat(service.getRepository().getConfig().getString("remote", "origin", "url"), is("testLoc"));
+    }
+
+    @Test
+    public void relativeLocalPath_shouldUseSystemPropertyForLocation() throws Exception {
+        System.setProperty("karaf.data", tempFolder.getRoot().getAbsolutePath());
+        service.setLocalWorkspace("test");
+        assertThat(service.getRepository().getWorkTree().getAbsolutePath(),
+                is(new File(tempFolder.getRoot(), "test").getAbsolutePath()));
     }
 }

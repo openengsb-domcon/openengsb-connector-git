@@ -391,11 +391,12 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     public void setLocalWorkspace(String localWorkspace) {
-        String realWorkspace = localWorkspace;
-        if (!new File(realWorkspace).isAbsolute()) {
-            realWorkspace = System.getProperty("karaf.data") + realWorkspace;
+        File workspaceFile = new File(localWorkspace);
+        if (workspaceFile.isAbsolute()) {
+            this.localWorkspace = workspaceFile;
+        } else {
+            this.localWorkspace = new File(System.getProperty("karaf.data"), localWorkspace);
         }
-        this.localWorkspace = new File(realWorkspace);
     }
 
     public void setWatchBranch(String watchBranch) {
