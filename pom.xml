@@ -36,6 +36,7 @@
     <jsch.wrapped.version>0.1.42.w1</jsch.wrapped.version>
     <openengsb.compile.version>2.1.2</openengsb.compile.version>
     <openengsb.domain.version>2.0.0</openengsb.domain.version>
+    <openengsb.domain.range>[2.0,2.1)</openengsb.domain.range>
   </properties>
 
   <groupId>org.openengsb.connector</groupId>
@@ -84,6 +85,20 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              ${openengsb.imports},
+              org.openengsb.domain.scm.*;version="${openengsb.domain.range}",
+              *
+            </Import-Package>
+          </instructions>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.openengsb</groupId>
