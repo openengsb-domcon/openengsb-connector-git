@@ -42,9 +42,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.openengsb.connector.git.domain.GitCommitRef;
 import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.domain.scm.CommitRef;
@@ -52,9 +50,6 @@ import org.openengsb.domain.scm.ScmException;
 import org.openengsb.domain.scm.TagRef;
 
 public class GitServiceImplTest extends AbstractGitServiceImpl {
-
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
 
     @Test
     public void updateWithEmptyWorkspace_shouldCloneRemoteRepository() throws Exception {
