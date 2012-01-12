@@ -29,10 +29,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
-import java.util.zip.ZipFile;
 
 import junit.framework.Assert;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TagCommand;
 import org.eclipse.jgit.lib.AnyObjectId;
@@ -379,9 +379,29 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     }
 
     @Test
-    public void changeRemoteLocation_ShouldChangeRemoteLocation() {
-        service.setRemoteLocation("testLoc");
-        assertThat(service.getRepository().getConfig().getString("remote", "origin", "url"), is("testLoc"));
+    public void changeRemoteLocation_ShouldReadFromNewRemote() throws Exception {
+        service.update();
+
+        /* Create a second remote that is based on the old remote, add an extra commit
+         * there and change the remote. Calling update() after the remote change should
+         * report this commit.
+         */
+        File remoteDirectory2 = tempFolder.newFolder("remote2");
+        FileUtils.copyDirectory(remoteDirectory, remoteDirectory2);
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+
+        File gitdir = new File(remoteDirectory2 + File.separator + ".git");
+        FileRepository remoteRepository2 = builder.setGitDir(gitdir)
+            .readEnvironment().findGitDir().build();
+        Git git = new Git(remoteRepository2);
+        RepositoryFixture.addFile(git, "second");
+        RepositoryFixture.commit(git, "second commit");
+
+        service.setRemoteLocation(remoteDirectory2.toURI().toURL().toExternalForm().replace("%20", " "));
+        List<CommitRef> commits = service.update();
+        File f = service.export().getFile();
+        assertThat(new File(f, "second").isFile(), is(true));
+        assertThat(commits.size(), is(1));
     }
 
     @Test
