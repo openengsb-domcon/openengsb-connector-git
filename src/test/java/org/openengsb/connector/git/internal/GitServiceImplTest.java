@@ -41,6 +41,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.Test;
 import org.openengsb.connector.git.domain.GitCommitRef;
@@ -70,10 +71,11 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     }
 
     @Test
-    public void update_shouldPullChangesIntoLocalBranch() {
+    public void update_shouldPullChangesIntoLocalBranch() throws Exception {
         List<CommitRef> updateOne = service.update();
         assertThat(updateOne.size(), is(1));
-        assertThat(new File(localDirectory, "testfile").isFile(), is(true));
+        ZipFile zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
     }
 
     @Test
@@ -83,10 +85,12 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, "second");
         RepositoryFixture.commit(git, "second commit");
-        assertThat(new File(localDirectory, "second").isFile(), is(false));
+        ZipFile zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("second"), is(nullValue()));
         List<CommitRef> updateTwo = service.update();
         assertThat(updateTwo.size(), is(1));
-        assertThat(new File(localDirectory, "second").isFile(), is(true));
+        zipFile = new ZipFile(service.export());
+        assertThat(zipFile.getEntry("second").getName(), is("second"));
         List<CommitRef> updateThree = service.update();
         assertThat(updateThree.size(), is(0));
     }
@@ -100,11 +104,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void exportRepository_shouldReturnZipFileWithRepoEntries() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
         String dir = "testDirectory";
         String file = "myTestFile";
-        File parent = new File(localDirectory, dir);
+        File parent = new File(remoteDirectory, dir);
         parent.mkdirs();
         File child = new File(parent, file);
         FileWriter fw = new FileWriter(child);
@@ -112,9 +114,11 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         fw.close();
 
         String pattern = dir + "/" + file;
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         git.add().addFilepattern(pattern).call();
         git.commit().setMessage("My msg").call();
+
+        service.update();
 
         ZipFile zipFile = new ZipFile(service.export());
         assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
@@ -123,11 +127,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     }
 
     public void exportRepositoryByRef_shouldReturnZipFileWithRepoEntries() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
         String dir = "testDirectory";
         String file = "myTestFile";
-        File parent = new File(localDirectory, dir);
+        File parent = new File(remoteDirectory, dir);
         parent.mkdirs();
         File child = new File(parent, file);
         FileWriter fw = new FileWriter(child);
@@ -135,14 +137,16 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         fw.close();
 
         String pattern = dir + "/" + file;
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         git.add().addFilepattern(pattern).call();
         git.commit().setMessage("My msg").call();
 
-        AnyObjectId headId = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        AnyObjectId headId = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit head = rw.parseCommit(headId);
         rw.release();
+
+        service.update();
 
         ZipFile zipFile = new ZipFile(service.export(new GitCommitRef(head)));
         assertThat(zipFile.getEntry("testfile").getName(), is("testfile"));
@@ -152,12 +156,12 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void getFileFromHeadCommit_shouldReturnFileWithCorrectContent() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
         String fileName = "myFile";
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
+
+        service.update();
 
         File file = service.get(fileName);
         String content = new BufferedReader(new FileReader(file)).readLine();
@@ -168,14 +172,15 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
     public void getFileFromCommitByRef_shouldReturnFileWithCorrectContent() throws Exception {
         String fileName = "myFile";
 
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-        AnyObjectId head = localRepository.resolve(Constants.HEAD);
-        RevWalk rw = new RevWalk(localRepository);
+        AnyObjectId head = remoteRepository.resolve(Constants.HEAD);
+        RevWalk rw = new RevWalk(remoteRepository);
         RevCommit headCommit = rw.parseCommit(head);
         rw.release();
-        Git git = new Git(localRepository);
+        Git git = new Git(remoteRepository);
         RepositoryFixture.addFile(git, fileName);
         RepositoryFixture.commit(git, "Commited my file");
+
+        service.update();
 
         File file = service.get("testfile", new GitCommitRef(headCommit));
         String content = new BufferedReader(new FileReader(file)).readLine();
@@ -184,11 +189,9 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void getFileFromCommitByNonExistingRef_shouldThrowSCMException() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
-
-        File file = service.get("testfile", new GitCommitRef(null));
+        File file = service.get("testfile_does_not_exist", new GitCommitRef(null));
         String content = new BufferedReader(new FileReader(file)).readLine();
-        assertThat(content, is("testfile"));
+        assertThat(content, is("testfile_does_not_exist"));
     }
 
     @Test
@@ -313,7 +316,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void tagHeadWithName_shouldReturnTagRefWithName() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.update();
+        FileRepository localRepository = service.getRepository();
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
@@ -327,7 +331,6 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test(expected = ScmException.class)
     public void tagHeadAgainWithSameName_shouldThrowSCMException() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
         String tagName = "newTag";
         TagRef tag = service.tagRepo(tagName);
         assertThat(tag, notNullValue());
@@ -345,7 +348,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void tagCommitRefWithName_shouldReturnTagRefWithName() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.update();
+        FileRepository localRepository = service.getRepository();
         RevWalk walk = new RevWalk(localRepository);
         RevCommit head = walk.lookupCommit(localRepository.resolve(Constants.HEAD));
         CommitRef ref = new GitCommitRef(head);
@@ -361,7 +365,8 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
 
     @Test
     public void getCommitRefForTagRef_shouldReturnTaggedCommitRef() throws Exception {
-        localRepository = RepositoryFixture.createRepository(localDirectory);
+        service.update();
+        FileRepository localRepository = service.getRepository();
         RevWalk walk = new RevWalk(localRepository);
         RevCommit head = walk.lookupCommit(localRepository.resolve(Constants.HEAD));
         String tagName = "newTag";
