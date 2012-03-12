@@ -21,12 +21,8 @@ import java.util.Map;
 
 import org.openengsb.core.api.Connector;
 import org.openengsb.core.common.AbstractConnectorInstanceFactory;
-import org.openengsb.domain.scm.ScmDomainEvents;
 
 public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<GitServiceImpl> {
-
-    @SuppressWarnings("unused")
-    private ScmDomainEvents scmEvents;
 
     @Override
     public Connector createNewInstance(String id) {
@@ -47,10 +43,6 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         if (attributes.containsKey("submodulesHack")) {
             instance.setSubmodulesHack(attributes.get("submodulesHack"));
         }
-    }
-
-    public void setScmEvents(ScmDomainEvents scmEvents) {
-        this.scmEvents = scmEvents;
     }
 
 }
