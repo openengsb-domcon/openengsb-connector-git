@@ -76,6 +76,7 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         assertThat(updateOne.size(), is(1));
         File f = service.export().getFile();
         assertThat(new File(f, "testfile").isFile(), is(true));
+        FileUtils.deleteDirectory(f);
     }
 
     @Test
