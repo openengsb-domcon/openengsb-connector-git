@@ -48,14 +48,29 @@ import org.openengsb.connector.git.domain.GitCommitRef;
 import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.domain.scm.CommitRef;
 import org.openengsb.domain.scm.ScmException;
+import org.openengsb.domain.scm.ScmUpdateEvent;
 import org.openengsb.domain.scm.TagRef;
 
 public class GitServiceImplTest extends AbstractGitServiceImpl {
+
+    private ScmUpdateEvent lastUpdateEvent = null;
 
     @Test
     public void updateWithEmptyWorkspace_shouldCloneRemoteRepository() throws Exception {
         service.startPoller();
         List<CommitRef> commits = service.update();
+        assertThat(commits.size(), is(1));
+        ObjectId remote = service.getRepository().resolve("refs/remotes/origin/master");
+        assertThat(remote, notNullValue());
+        assertThat(remote, is(remoteRepository.resolve("refs/heads/master")));
+        assertThat(commits.get(0).getStringRepresentation(), is(service.getRepository().resolve(Constants.HEAD).name()));
+    }
+
+    @Test
+    public void updateWithEmptyWorkspace_shouldRaiseUpdateEvent() throws Exception {
+        service.startPoller();
+        Thread.sleep(2000);
+        List<CommitRef> commits = lastUpdateEvent.getChanges();
         assertThat(commits.size(), is(1));
         ObjectId remote = service.getRepository().resolve("refs/remotes/origin/master");
         assertThat(remote, notNullValue());
@@ -70,6 +85,18 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         assertThat(updateOne.size(), is(1));
         List<CommitRef> updateTwo = service.update();
         assertThat(updateTwo.size(), is(0));
+    }
+
+    @Test
+    public void updateAgainFromSameRepoState_shouldNotRaiseEvent() throws Exception{
+        service.startPoller();
+        Thread.sleep(2000);
+        List<CommitRef> updateOne = lastUpdateEvent.getChanges();
+        lastUpdateEvent = null;
+        assertThat(updateOne.size(), is(1));
+
+        Thread.sleep(2000);
+        assertThat(lastUpdateEvent, is(nullValue()));
     }
 
     @Test
@@ -91,14 +118,33 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         RepositoryFixture.addFile(git, "second");
         RepositoryFixture.commit(git, "second commit");
 
-        File f = service.export().getFile();
-        assertThat(new File(f, "second").isFile(), is(false));
         List<CommitRef> updateTwo = service.update();
         assertThat(updateTwo.size(), is(1));
-        f = service.export().getFile();
+        File f = service.export().getFile();
         assertThat(new File(f, "second").isFile(), is(true));
         List<CommitRef> updateThree = service.update();
         assertThat(updateThree.size(), is(0));
+    }
+
+    @Test
+    public void updateFromUpdatedRemote_shouldRaiseEvent() throws Exception {
+        service.startPoller();
+        Thread.sleep(2000);
+        List<CommitRef> updateOne = lastUpdateEvent.getChanges();
+        lastUpdateEvent = null;
+        assertThat(updateOne.size(), is(1));
+
+        Git git = new Git(remoteRepository);
+        RepositoryFixture.addFile(git, "second");
+        RepositoryFixture.commit(git, "second commit");
+
+        Thread.sleep(2000);
+        List<CommitRef> updateTwo = lastUpdateEvent.getChanges();
+        lastUpdateEvent = null;
+        assertThat(updateTwo.size(), is(1));
+
+        File f = service.export().getFile();
+        assertThat(new File(f, "second").isFile(), is(true));
     }
 
     @Test
@@ -422,5 +468,10 @@ public class GitServiceImplTest extends AbstractGitServiceImpl {
         service.setLocalWorkspace("test");
         assertThat(service.getRepository().getWorkTree().getAbsolutePath(),
                 is(new File(tempFolder.getRoot(), "test").getAbsolutePath()));
+    }
+
+    @Override
+    public void raiseEvent(ScmUpdateEvent event) {
+        lastUpdateEvent = event;
     }
 }

@@ -208,7 +208,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
 
     public void poll() {
         List<CommitRef> refs = do_update();
-        if (refs == null) {
+        if (refs == null || refs.size() == 0) {
             return;
         }
 
@@ -720,12 +720,17 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     public synchronized void setPollInterval(String pollInterval) {
         int newInterval = new Integer(pollInterval).intValue();
         this.pollInterval = newInterval;
-
+        
         if (pollFuture == null) {
             return;
         }
-
-        pollFuture.cancel(true);
+        stopPoller();
         pollFuture = scmScheduler.scheduleWithFixedDelay(poller, newInterval, newInterval, TimeUnit.SECONDS);
+    }
+
+    public void stopPoller() {
+        if (pollFuture != null) {
+            pollFuture.cancel(true);
+        }
     }
 }

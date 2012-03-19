@@ -20,13 +20,17 @@ package org.openengsb.connector.git.internal;
 import java.io.File;
 
 import org.eclipse.jgit.storage.file.FileRepository;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
+import org.openengsb.core.api.edb.EDBBatchEvent;
+import org.openengsb.core.api.edb.EDBDeleteEvent;
+import org.openengsb.core.api.edb.EDBInsertEvent;
+import org.openengsb.core.api.edb.EDBUpdateEvent;
 import org.openengsb.domain.scm.ScmDomainEvents;
 
-public abstract class AbstractGitServiceImpl {
+public abstract class AbstractGitServiceImpl implements ScmDomainEvents {
 
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
@@ -45,10 +49,39 @@ public abstract class AbstractGitServiceImpl {
         localDirectory = tempFolder.newFolder("local");
         remoteRepository = RepositoryFixture.createRepository(remoteDirectory);
 
-        eventMock = Mockito.mock(ScmDomainEvents.class);
-        service = new GitServiceImpl("42", eventMock);
+        service = new GitServiceImpl("42", this);
         service.setLocalWorkspace(localDirectory.getAbsolutePath());
         service.setRemoteLocation(remoteDirectory.toURI().toURL().toExternalForm().replace("%20", " "));
         service.setWatchBranch("master");
+        service.setPollInterval("1");
+    }
+
+    @After
+    public void teardown() throws Exception {
+        service.stopPoller();
+    }
+
+    @Override
+    public void raiseEvent(EDBInsertEvent arg0) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void raiseEvent(EDBDeleteEvent arg0) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void raiseEvent(EDBUpdateEvent arg0) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void raiseEvent(EDBBatchEvent arg0) {
+        // TODO Auto-generated method stub
+        
     }
 }

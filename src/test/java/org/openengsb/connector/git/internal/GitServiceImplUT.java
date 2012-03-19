@@ -34,6 +34,7 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.junit.Test;
 import org.openengsb.domain.scm.CommitRef;
+import org.openengsb.domain.scm.ScmUpdateEvent;
 
 /**
  * This class contains unit-tests which may require a special system setup and
@@ -44,6 +45,7 @@ public class GitServiceImplUT extends AbstractGitServiceImpl {
     @Test
     public void pollWithEmptyWorkspace_shouldCloneRemoteRepository() throws IOException {
         service.setRemoteLocation("git://github.com/Mercynary/myTestRepo.git");
+        service.startPoller();
         service.update();
         localRepository = service.getRepository();
         AnyObjectId id = localRepository.resolve(Constants.HEAD);
@@ -75,5 +77,11 @@ public class GitServiceImplUT extends AbstractGitServiceImpl {
 
         ObjectId objectId = treeWalk.getObjectId(treeWalk.getTreeCount() - 1);
         assertThat(objectId, not(ObjectId.zeroId()));
+    }
+
+    @Override
+    public void raiseEvent(ScmUpdateEvent arg0) {
+        // TODO Auto-generated method stub
+        
     }
 }
