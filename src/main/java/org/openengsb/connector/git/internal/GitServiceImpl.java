@@ -92,8 +92,6 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
      * Starts the poller scheduler. Call this method once all parameters are configured.
      */
     public synchronized void startPoller() {
-        /* Poll once to avoid race conditions between legacy update() calls and the poller */
-        poll();
         poller = new PollTask(this);
         pollFuture = scmScheduler.scheduleWithFixedDelay(poller, pollInterval, pollInterval, TimeUnit.SECONDS);
     }
