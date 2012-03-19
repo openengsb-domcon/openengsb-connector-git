@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
@@ -80,6 +81,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     private ScheduledExecutorService scmScheduler = Executors.newScheduledThreadPool(1);
     private ScmDomainEvents domainEventInterface;
     private List<CommitRef> unreportedUpdates = null;
+    private ScheduledFuture<?> pollFuture = null;
 
     public GitServiceImpl(String instanceId, ScmDomainEvents events) {
         super(instanceId);
@@ -89,11 +91,11 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     /**
      * Starts the poller scheduler. Call this method once all parameters are configured.
      */
-    public void startPoller() {
+    public synchronized void startPoller() {
         /* Poll once to avoid race conditions between legacy update() calls and the poller */
         poll();
         poller = new PollTask(this);
-        scmScheduler.scheduleWithFixedDelay(poller, pollInterval, pollInterval, TimeUnit.SECONDS);
+        pollFuture = scmScheduler.scheduleWithFixedDelay(poller, pollInterval, pollInterval, TimeUnit.SECONDS);
     }
 
     @Override
@@ -715,7 +717,15 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         submodulesHack = new Boolean(string).booleanValue();
     }
 
-    public void setPollInterval(String pollInterval) {
-        this.pollInterval = new Integer(pollInterval).intValue();
+    public synchronized void setPollInterval(String pollInterval) {
+        int newInterval = new Integer(pollInterval).intValue();
+        this.pollInterval = newInterval;
+
+        if (pollFuture == null) {
+            return;
+        }
+
+        pollFuture.cancel(true);
+        pollFuture = scmScheduler.scheduleWithFixedDelay(poller, newInterval, newInterval, TimeUnit.SECONDS);
     }
 }
