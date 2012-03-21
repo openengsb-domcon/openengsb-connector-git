@@ -17,6 +17,8 @@
 
 package org.openengsb.connector.git.internal;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.File;
 
 import org.eclipse.jgit.storage.file.FileRepository;
@@ -29,6 +31,7 @@ import org.openengsb.core.api.edb.EDBDeleteEvent;
 import org.openengsb.core.api.edb.EDBInsertEvent;
 import org.openengsb.core.api.edb.EDBUpdateEvent;
 import org.openengsb.domain.scm.ScmDomainEvents;
+import org.springframework.security.authentication.AuthenticationManager;
 
 public abstract class AbstractGitServiceImpl implements ScmDomainEvents {
 
@@ -54,6 +57,7 @@ public abstract class AbstractGitServiceImpl implements ScmDomainEvents {
         service.setRemoteLocation(remoteDirectory.toURI().toURL().toExternalForm().replace("%20", " "));
         service.setWatchBranch("master");
         service.setPollInterval("1");
+        service.setAuthenticationManager(mock(AuthenticationManager.class));
     }
 
     @After

@@ -67,6 +67,7 @@ import org.openengsb.domain.scm.TagRef;
 import org.openengsb.domain.scm.ScmUpdateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationManager;
 
 public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements ScmDomain {
     private static final Logger LOGGER = LoggerFactory.getLogger(GitServiceImpl.class);
@@ -82,6 +83,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     private ScmDomainEvents domainEventInterface;
     private List<CommitRef> unreportedUpdates = null;
     private ScheduledFuture<?> pollFuture = null;
+    private AuthenticationManager authenticationManager;
 
     public GitServiceImpl(String instanceId, ScmDomainEvents events) {
         super(instanceId);
@@ -92,7 +94,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
      * Starts the poller scheduler. Call this method once all parameters are configured.
      */
     public synchronized void startPoller() {
-        poller = new PollTask(this);
+        poller = new PollTask(this, authenticationManager);
         pollFuture = scmScheduler.scheduleWithFixedDelay(poller, pollInterval, pollInterval, TimeUnit.SECONDS);
     }
 
@@ -730,5 +732,9 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
         if (pollFuture != null) {
             pollFuture.cancel(true);
         }
+    }
+
+    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
     }
 }

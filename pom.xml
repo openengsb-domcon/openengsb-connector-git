@@ -139,6 +139,12 @@
     </dependency>
     <dependency>
       <groupId>org.openengsb.framework</groupId>
+      <artifactId>org.openengsb.framework.security</artifactId>
+      <version>${openengsb.compile.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openengsb.framework</groupId>
       <artifactId>org.openengsb.framework.test</artifactId>
       <version>${openengsb.compile.version}</version>
       <scope>test</scope>

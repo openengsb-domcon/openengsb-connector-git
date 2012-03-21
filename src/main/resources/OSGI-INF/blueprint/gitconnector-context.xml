@@ -31,6 +31,7 @@
     </service-properties>
     <bean class="org.openengsb.connector.git.internal.GitServiceInstanceFactory">
       <property name="scmEvents" ref="scmEvents" />
+      <property name="authenticationManager" ref="authenticationManager" />
     </bean>
   </service>
 
@@ -49,5 +50,6 @@
   </service>
   
   <reference id="scmEvents" interface="org.openengsb.domain.scm.ScmDomainEvents" />
+  <reference id="authenticationManager" interface="org.springframework.security.authentication.AuthenticationManager" />
   
 </blueprint>

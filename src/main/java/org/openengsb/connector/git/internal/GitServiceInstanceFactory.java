@@ -22,10 +22,12 @@ import java.util.Map;
 import org.openengsb.core.api.Connector;
 import org.openengsb.core.common.AbstractConnectorInstanceFactory;
 import org.openengsb.domain.scm.ScmDomainEvents;
+import org.springframework.security.authentication.AuthenticationManager;
 
 public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<GitServiceImpl> {
 
     private ScmDomainEvents scmEvents;
+    private AuthenticationManager authenticationManager;
 
     @Override
     public Connector createNewInstance(String id) {
@@ -49,6 +51,7 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         if (attributes.containsKey("pollInterval")) {
             instance.setPollInterval(attributes.get("pollInterval"));
         }
+        instance.setAuthenticationManager(authenticationManager);
         instance.startPoller();
     }
 
@@ -56,4 +59,7 @@ public class GitServiceInstanceFactory extends AbstractConnectorInstanceFactory<
         this.scmEvents = scmEvents;
     }
 
+    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
+    }
 }
