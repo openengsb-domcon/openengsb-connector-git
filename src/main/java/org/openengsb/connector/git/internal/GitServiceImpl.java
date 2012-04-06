@@ -207,8 +207,8 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
             repository.create();
             repository.getConfig().setString("remote", "origin", "fetch", "+refs/heads/*:refs/remotes/origin/*");
             repository.getConfig().setString("remote", "origin", "url", remoteLocation);
-            repository.getConfig().setString("branch", watchBranch, "remote", "origin");
-            repository.getConfig().setString("branch", watchBranch, "merge", "refs/heads/" + watchBranch);
+            repository.getConfig().setString("branch", "master", "remote", "origin");
+            repository.getConfig().setString("branch", "master", "merge", "refs/heads/" + watchBranch);
             repository.getConfig().save();
         }
     }
