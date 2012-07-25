@@ -54,7 +54,6 @@ import org.openengsb.connector.git.domain.GitTagRef;
 import org.openengsb.core.api.AliveState;
 import org.openengsb.core.api.model.OpenEngSBFileModel;
 import org.openengsb.core.common.AbstractOpenEngSBConnectorService;
-import org.openengsb.core.common.util.ModelUtils;
 import org.openengsb.domain.scm.CommitRef;
 import org.openengsb.domain.scm.ScmDomain;
 import org.openengsb.domain.scm.ScmException;
@@ -264,7 +263,7 @@ public class GitServiceImpl extends AbstractOpenEngSBConnectorService implements
     }
 
     private OpenEngSBFileModel createFileModel(File f) {
-        OpenEngSBFileModel model = ModelUtils.createEmptyModelObject(OpenEngSBFileModel.class);
+        OpenEngSBFileModel model = new OpenEngSBFileModel();
         model.setFile(f);
         return model;
     }
