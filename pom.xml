@@ -34,9 +34,11 @@
     <jgit.version>1.1.0.201109151100-r</jgit.version>
     <commons.compress.version>1.3</commons.compress.version>
     <jsch.wrapped.version>0.1.42.w1</jsch.wrapped.version>
+    <commons.io.version>2.3</commons.io.version>
     <openengsb.compile.version>3.0.0-SNAPSHOT</openengsb.compile.version>
     <openengsb.domain.version>3.0.0-SNAPSHOT</openengsb.domain.version>
     <openengsb.domain.range>[3.0,4)</openengsb.domain.range>
+    <hamcrest.version>1.1</hamcrest.version>
   </properties>
 
   <groupId>org.openengsb.connector</groupId>
@@ -93,7 +95,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              ${openengsb.imports},
               org.openengsb.domain.scm.*;version="${openengsb.domain.range}",
               *
             </Import-Package>
@@ -162,6 +163,16 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
       <version>${commons.compress.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons.io.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
+      <version>${hamcrest.version}</version>
     </dependency>
   </dependencies>
 
